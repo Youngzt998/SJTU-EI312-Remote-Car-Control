@@ -2,6 +2,7 @@ package com.example.android_tcp;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -18,14 +19,33 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.example.android_tcp.util.NetTools;
+import com.example.android_tcp.util.QRCodeUtil;
+import com.google.zxing.qrcode.QRCodeWriter;
+
+import org.opencv.android.OpenCVLoader;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.util.Enumeration;
 
 public class PhoneOnHandActivity extends AppCompatActivity {
+    static {
+        if(!OpenCVLoader.initDebug())
+        {
+            Log.d("opencv","初始化失败");
+        }
+        else{
+            Log.d("opencv","初始化成功");
+        }
+    }
+
+
     private String TAG = "PhoneOnHandActivity";
 
     //可能需要建立两条信道
@@ -78,6 +98,11 @@ public class PhoneOnHandActivity extends AppCompatActivity {
         mSendThread_Control = new SocketSendThread_Control();
         mSendThread_Control.start();
 
+        //向小车端发送ip地址
+        UdpSendThread udpSendThread = new UdpSendThread(this.getApplicationContext());
+        udpSendThread.start();
+
+        QRCodeWriter qrCodeWriter = new QRCodeWriter();
     }
 
     public void startServer_Control()
@@ -224,20 +249,22 @@ public class PhoneOnHandActivity extends AppCompatActivity {
         @Override
         public void run()
         {
-            try{
-                //等待客户端连接，使用子线程运行（否则会阻塞）
-                mSocket_Control = mServerSocket_Control.accept();
-                //获取输入流、输出流
-                mInStream_Image = mSocket_Control.getInputStream();
-                mOutStream_Control = mSocket_Control.getOutputStream();
+//            while(!interrupted())
+//            {
+                try {
+                    //等待客户端连接，使用子线程运行（否则会阻塞）
+                    mSocket_Control = mServerSocket_Control.accept();
+                    //获取输入流、输出流
+                    mInStream_Image = mSocket_Control.getInputStream();
+                    mOutStream_Control = mSocket_Control.getOutputStream();
 
-            }
-            catch (IOException e){
-                //Toast.makeText(PhoneOnCarActivity.this, "accept failed", Toast.LENGTH_SHORT).show();
-                Log.d(TAG, "accept fail");
-                return;
-            }
-            Log.d(TAG, "accept success");
+                } catch (IOException e) {
+                    //Toast.makeText(PhoneOnCarActivity.this, "accept failed", Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "accept fail");
+                    return;
+                }
+                Log.d(TAG, "accept success");
+//            }
         }
     }
 
@@ -279,10 +306,30 @@ public class PhoneOnHandActivity extends AppCompatActivity {
         }
     }
 
+
+
     /*************************************************************************************************************************/
     /*
     * 设置按钮点击事件
     */
+
+    //生成包含IP地址的二维码的点击事件
+    //借用之后的image
+    public void clickOnBtnIpQr(View view)
+    {
+
+        String ip = "000.000.000.000";
+        try {
+            ip = NetTools.getIP(this.getApplicationContext());
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+        ImageView imageView = (ImageView) findViewById(R.id.imageFromCar);
+        imageView.setImageBitmap(QRCodeUtil.generateBitmap(ip, 600, 600));
+
+    }
+
 
     //获取控制流信道的连接状态
     public void clickBtnGetStateControl(View view)

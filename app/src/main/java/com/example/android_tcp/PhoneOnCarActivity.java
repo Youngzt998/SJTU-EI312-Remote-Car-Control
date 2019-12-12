@@ -6,7 +6,9 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -39,8 +41,11 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+//import com.google.zxing.client.*;
+
 //外部库
 import com.example.android_tcp.util.*;
+import com.google.zxing.client.android.CaptureActivity;
 
 public class PhoneOnCarActivity extends AppCompatActivity {
     private String TAG = "PhoneOnCarActivity";
@@ -54,12 +59,13 @@ public class PhoneOnCarActivity extends AppCompatActivity {
     //OnePlus: 10.189.108.244
     //OnePlus in wifi 414: 192.168.1.*
     //vivo in wifi 414: 192.168.1.*
-    String mPhoneOnCarIpAddress_Control = "10.7.194.42";
+    String mPhoneOnCarIpAddress_Control = "192.168.43.237";
     int mPhoneOnCarPort_Control = 8000;
     private OutputStream mOutStream_Control;
     private InputStream mInStream_Control;
     private SocketConnectThread_Control mConnectThread_Control;
     private SocketReceiveThread_Control mReceiveThread_Control;
+
 
 
     //用于操作后置摄像头, 变量名后缀 _back
@@ -89,6 +95,33 @@ public class PhoneOnCarActivity extends AppCompatActivity {
         setOnImageAvailableListener();
 
     }
+
+    /*************************************************************************************************************************/
+    // 从某个acivity返回
+    static int REQUEST_CODE_QR_STRING = 100;
+    public String newActivityResultString;
+    public int test = -1;
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data)
+    {
+        test = 0;
+        super.onActivityResult(requestCode, resultCode, data);
+        //IntentResult intentResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
+        if(requestCode == REQUEST_CODE_QR_STRING)
+        {
+            Log.d(TAG, "REQUEST_CODE_QR_STRING");
+            if(data!=null)
+            {
+                newActivityResultString= data.getStringExtra("resultString");
+                Log.d(TAG, "intent data is: " + data.getDataString());
+                Log.d(TAG, "intent data is: " + data.getStringExtra("resultString"));
+            }
+            else {
+                Log.d(TAG, "intent data is null");
+            }
+        }
+    }
+
 
     /*************************************************************************************************************************/
     //按下开启摄像头的按钮
@@ -313,6 +346,12 @@ public class PhoneOnCarActivity extends AppCompatActivity {
         mConnectThread_Control = new SocketConnectThread_Control();
         mConnectThread_Control.start();
 
+        try {
+            mConnectThread_Control.join();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
         mReceiveThread_Control = new SocketReceiveThread_Control();
         mReceiveThread_Control.start();
     }
@@ -320,10 +359,26 @@ public class PhoneOnCarActivity extends AppCompatActivity {
     //建立连接的子线程
     class SocketConnectThread_Control extends Thread
     {
+
+        public SocketConnectThread_Control()
+        {
+            Intent intent = new Intent(PhoneOnCarActivity.this, CaptureActivity.class);
+            startActivityForResult(intent,REQUEST_CODE_QR_STRING);
+           // String content = intent.getStringExtra("codedContent");
+            Log.d(TAG, "code content is " + newActivityResultString);
+            Log.d(TAG, "test is: " + test);
+
+        }
+
         @Override
         public void run()
         {
+
             try{
+                Log.d(TAG, "try connecting: " + newActivityResultString);
+                mPhoneOnCarIpAddress_Control = newActivityResultString;
+                mPhoneOnCarPort_Control = 8000;
+
                 mSocket_Control = new Socket(mPhoneOnCarIpAddress_Control, mPhoneOnCarPort_Control);
                 if(mSocket_Control != null)
                 {
@@ -335,7 +390,8 @@ public class PhoneOnCarActivity extends AppCompatActivity {
                 }
             }
             catch (Exception e){
-                Log.d(TAG, "connect fail");
+                Log.d(TAG, "failed");
+                e.printStackTrace();
                 return;
             }
             Log.d(TAG, "connect success");
@@ -375,7 +431,7 @@ public class PhoneOnCarActivity extends AppCompatActivity {
 
                 }
                 catch (Exception e){
-                    Log.d(TAG, "read control msg fail");
+                    //Log.d(TAG, "read control msg fail");
                 }
             }
         }

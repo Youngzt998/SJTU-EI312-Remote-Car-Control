@@ -1,2 +1,4 @@
-include ':app'
+include ':app', ':android-core', ':core'
 rootProject.name='Android_TCP'
+include ':openCVLibrary348'
+include ':android'
