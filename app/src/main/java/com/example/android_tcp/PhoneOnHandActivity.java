@@ -3,6 +3,7 @@ package com.example.android_tcp;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
+import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -13,17 +14,32 @@ import android.os.Message;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.Surface;
+import android.view.SurfaceView;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.android_tcp.util.NetTools;
 import com.example.android_tcp.util.QRCodeUtil;
 import com.google.zxing.qrcode.QRCodeWriter;
 
+import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfRect;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -34,7 +50,8 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.Enumeration;
 
-public class PhoneOnHandActivity extends AppCompatActivity {
+public class PhoneOnHandActivity extends AppCompatActivity implements
+        CameraBridgeViewBase.CvCameraViewListener2{
     static {
         if(!OpenCVLoader.initDebug())
         {
@@ -43,6 +60,8 @@ public class PhoneOnHandActivity extends AppCompatActivity {
         else{
             Log.d("opencv","初始化成功");
         }
+
+        System.loadLibrary("opencv_java3");
     }
 
 
@@ -82,6 +101,13 @@ public class PhoneOnHandActivity extends AppCompatActivity {
 
     private Handler subThreadHandler;   //主线程向子线程发送消息
 
+    private CameraBridgeViewBase cameraView;
+    private CascadeClassifier classifier;
+    private Mat mGray;
+    private Mat mRgba;
+    private int mAbsoluteFaceSize = 0;
+    private boolean isFrontCamera;
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -99,22 +125,49 @@ public class PhoneOnHandActivity extends AppCompatActivity {
         mSendThread_Control.start();
 
         //向小车端发送ip地址
-        UdpSendThread udpSendThread = new UdpSendThread(this.getApplicationContext());
-        udpSendThread.start();
+//        UdpSendThread udpSendThread = new UdpSendThread(this.getApplicationContext());
+//        udpSendThread.start();
 
-        QRCodeWriter qrCodeWriter = new QRCodeWriter();
+//        QRCodeWriter qrCodeWriter = new QRCodeWriter();
+
+
+//        initWindowSettings();
+//        cameraView = findViewById(R.id.FaceView);
+//        cameraView.setVisibility(SurfaceView.VISIBLE);
+//        cameraView.setCvCameraViewListener(this); // 设置相机监听
+//        initClassifier();
+//        cameraView.setCameraIndex(CameraBridgeViewBase.CAMERA_ID_FRONT);
+//        cameraView.enableView();
+
+
+    }
+
+
+
+    public void clickOnStartServer(View view)
+    {
+//        try {
+//            mSocket_Control.close();
+//        }catch (Exception e){
+//            e.printStackTrace();
+//        }
+//
+//        mAcceptThread_Control = new SocketBuildThread();
+//        mAcceptThread_Control.start();
+//        Toast.makeText(this, "服务重启成功", Toast.LENGTH_SHORT).show();
     }
 
     public void startServer_Control()
     {
         try{
             //开启服务并指定端口
-            mServerSocket_Control = new ServerSocket(8000);
+            mServerSocket_Control = new ServerSocket(60000);
         }
         catch (IOException e){
             Toast.makeText(this, "绑定端口失败...", Toast.LENGTH_SHORT).show();
+            Log.d(TAG, "端口失败");
             e.printStackTrace();
-            //Log.d("Socket:", );
+            Log.d(TAG, "端口失败");
             return;
         }
         Toast.makeText(this, "绑定端口成功...", Toast.LENGTH_SHORT).show();
@@ -257,7 +310,6 @@ public class PhoneOnHandActivity extends AppCompatActivity {
                     //获取输入流、输出流
                     mInStream_Image = mSocket_Control.getInputStream();
                     mOutStream_Control = mSocket_Control.getOutputStream();
-
                 } catch (IOException e) {
                     //Toast.makeText(PhoneOnCarActivity.this, "accept failed", Toast.LENGTH_SHORT).show();
                     Log.d(TAG, "accept fail");
@@ -306,6 +358,93 @@ public class PhoneOnHandActivity extends AppCompatActivity {
         }
     }
 
+    /***************************************************************************************************/
+    @Override
+    public void onCameraViewStarted(int width, int height) {
+        mGray = new Mat();
+        mRgba = new Mat();
+    }
+
+    @Override
+    public void onCameraViewStopped() {
+        mGray.release();
+        mRgba.release();
+    }
+
+    // 初始化窗口设置, 包括全屏、横屏、常亮
+    private void initWindowSettings() {
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+    }
+
+    // 初始化人脸级联分类器，必须先初始化
+    private void initClassifier() {
+        try {
+            InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface);
+            File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
+            File cascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
+            FileOutputStream os = new FileOutputStream(cascadeFile);
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = is.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+            is.close();
+            os.close();
+            classifier = new CascadeClassifier(cascadeFile.getAbsolutePath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    // 这里执行人脸检测的逻辑, 根据OpenCV提供的例子实现(face-detection)
+    public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
+        mRgba = inputFrame.rgba();
+        mGray = inputFrame.gray();
+        // 翻转矩阵以适配前后置摄像头
+        if (isFrontCamera) {
+            Core.flip(mRgba, mRgba, 0);
+            Core.flip(mGray, mGray, 0);
+            Core.rotate(mRgba, mRgba, Core.ROTATE_90_COUNTERCLOCKWISE);
+            Core.rotate(mGray, mGray, Core.ROTATE_90_COUNTERCLOCKWISE);
+        } //else {
+        //Core.flip(mRgba, mRgba, 1);
+        //Core.flip(mGray, mGray, 1);
+        //}
+
+
+
+        float mRelativeFaceSize = 0.2f;
+        if (mAbsoluteFaceSize == 0) {
+            int height = mGray.rows();
+            if (Math.round(height * mRelativeFaceSize) > 0) {
+                mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
+            }
+        }
+        MatOfRect faces = new MatOfRect();
+        if (classifier != null)
+            classifier.detectMultiScale(mGray, faces, 1.1, 2, 2,
+                    new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+        Rect[] facesArray = faces.toArray();
+        Scalar faceRectColor = new Scalar(0, 255, 0, 255);
+        //TextView textview = findViewById(R.id.textView2);
+        for (Rect faceRect : facesArray) {
+            Imgproc.rectangle(mRgba, faceRect.tl(), faceRect.br(), faceRectColor, 3);
+        }
+
+        //判断脸在右侧还是左侧
+        /*if(facesArray[0].tl().x*2>mRgba.cols())
+            textview.setText("left");
+        else if(facesArray[0].br().x*2<mRgba.cols())
+            textview.setText("right");
+        else
+            textview.setText("midle");*/
+
+        return mRgba;
+    }
 
 
     /*************************************************************************************************************************/
@@ -313,20 +452,21 @@ public class PhoneOnHandActivity extends AppCompatActivity {
     * 设置按钮点击事件
     */
 
+
+
     //生成包含IP地址的二维码的点击事件
-    //借用之后的image
+    //借用一下之后的image对象
     public void clickOnBtnIpQr(View view)
     {
-
         String ip = "000.000.000.000";
         try {
             ip = NetTools.getIP(this.getApplicationContext());
+            ImageView imageView = (ImageView) findViewById(R.id.imageFromCar);
+            imageView.setImageBitmap(QRCodeUtil.generateBitmap(ip, 600, 600));
         }catch (Exception e){
             e.printStackTrace();
+            Toast.makeText(this, "生成ip二维码时出错", Toast.LENGTH_SHORT).show();
         }
-
-        ImageView imageView = (ImageView) findViewById(R.id.imageFromCar);
-        imageView.setImageBitmap(QRCodeUtil.generateBitmap(ip, 600, 600));
 
     }
 
@@ -334,13 +474,13 @@ public class PhoneOnHandActivity extends AppCompatActivity {
     //获取控制流信道的连接状态
     public void clickBtnGetStateControl(View view)
     {
-        if(mSocket_Control == null)
+        if(mSocket_Control != null && mSocket_Control.isConnected() && !mSocket_Control.isClosed() )
         {
-            Toast.makeText(this, "小车端未连接", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "小车端已连接", Toast.LENGTH_SHORT).show();
             return;
         }
         else {
-            Toast.makeText(this, "小车端已连接", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "小车端未连接", Toast.LENGTH_SHORT).show();
             return;
         }
     }
@@ -350,7 +490,7 @@ public class PhoneOnHandActivity extends AppCompatActivity {
 
     public void setButton()
     {
-        setButtonUDLR();
+        //setButtonUDLR();
     }
 
     //为了能够按下时持续发送指令，需要在按下时开启一个线程，松开时关闭这个线程（因为Button本身没有这个功能）
@@ -372,7 +512,7 @@ public class PhoneOnHandActivity extends AppCompatActivity {
                     }
 
                     case MotionEvent.ACTION_UP:{    //松开
-                        mSendMessageThread_Control.exitThread=true;         //关闭发送"U"的线程
+                        mSendMessageThread_Control.interrupt();         //关闭发送"U"的线程
                         Log.d("onTouch UP", "close thread");
                         break;
                     }
@@ -397,7 +537,7 @@ public class PhoneOnHandActivity extends AppCompatActivity {
                     }
 
                     case MotionEvent.ACTION_UP:{    //松开
-                        mSendMessageThread_Control.exitThread=true;         //关闭发送"U"的线程
+                        mSendMessageThread_Control.interrupt();         //关闭发送"U"的线程
                         Log.d("onTouch UP", "close thread");
                         break;
                     }
@@ -421,7 +561,7 @@ public class PhoneOnHandActivity extends AppCompatActivity {
                     }
 
                     case MotionEvent.ACTION_UP:{    //松开
-                        mSendMessageThread_Control.exitThread=true;         //关闭发送"U"的线程
+                        mSendMessageThread_Control.interrupt();         //关闭发送"U"的线程
                         Log.d("onTouch UP", "close thread");
                         break;
                     }
@@ -445,7 +585,7 @@ public class PhoneOnHandActivity extends AppCompatActivity {
                     }
 
                     case MotionEvent.ACTION_UP:{    //松开
-                        mSendMessageThread_Control.exitThread=true;         //关闭发送"U"的线程
+                        mSendMessageThread_Control.interrupt();         //关闭发送"U"的线程
                         Log.d("onTouch UP", "close thread");
                         break;
                     }
@@ -477,7 +617,7 @@ public class PhoneOnHandActivity extends AppCompatActivity {
         {
             Log.d("sendMessageThread", "started");
             int counter = 0;
-            while (!exitThread)
+            while (!interrupted())
             {
                 sendMsgToCar(direction);
                 Log.d("sendMessageThread", direction);
@@ -485,27 +625,121 @@ public class PhoneOnHandActivity extends AppCompatActivity {
                 //强制退出
                 counter++;
                 if(counter>=10000)
-                    exitThread = true;
+                    interrupt();
             }
         }
     }
 
     //控制上下左右，这种方式只能点击一下发送一个字符串
-//    public void clickBtnUp(View view)
-//    {
-//        //不能在主线程进行，否则报错(Android 4 以下)
-//        // writeMsgToCar("u");
-//
-//        //向子线程发送消息
-//        Message message = new Message();
-//        message.obj = "U";
-//        try {
-//            subThreadHandler.sendMessage(message);
-//        }
-//        catch (Exception e){
-//            Log.d(TAG, "send to subthread fail");
-//            e.printStackTrace();
-//        }
-//    }
+    public void clickBtnUp(View view)
+    {
+        //不能在主线程进行，否则报错(Android 4 以下)
+        // writeMsgToCar("u");
+
+        //向子线程发送消息
+        Message message = new Message();
+        message.obj = "3";
+        try {
+            subThreadHandler.sendMessage(message);
+        }
+        catch (Exception e){
+            Log.d(TAG, "send to subthread fail");
+            e.printStackTrace();
+        }
+    }
+
+    public void clickBtnDown(View view)
+    {
+        //不能在主线程进行，否则报错(Android 4 以下)
+        // writeMsgToCar("u");
+
+        //向子线程发送消息
+        Message message = new Message();
+        message.obj = "4";
+        try {
+            subThreadHandler.sendMessage(message);
+        }
+        catch (Exception e){
+            Log.d(TAG, "send to subthread fail");
+            e.printStackTrace();
+        }
+    }
+
+    public void clickBtnLeft(View view)
+    {
+        //不能在主线程进行，否则报错(Android 4 以下)
+        // writeMsgToCar("u");
+
+        //向子线程发送消息
+        Message message = new Message();
+        message.obj = "1";
+        try {
+            subThreadHandler.sendMessage(message);
+        }
+        catch (Exception e){
+            Log.d(TAG, "send to subthread fail");
+            e.printStackTrace();
+        }
+    }
+
+    public void clickBtnRight(View view)
+    {
+        //不能在主线程进行，否则报错(Android 4 以下)
+        // writeMsgToCar("u");
+
+        //向子线程发送消息
+        Message message = new Message();
+        message.obj = "2";
+        try {
+            subThreadHandler.sendMessage(message);
+        }
+        catch (Exception e){
+            Log.d(TAG, "send to subthread fail");
+            e.printStackTrace();
+        }
+    }
+
+
+    public void setBottonGesture()
+    {
+        ImageButton imageButton= (ImageButton)findViewById(R.id.btnGesture);
+        imageButton.setOnTouchListener(
+                new View.OnTouchListener() {
+                    @Override
+                    public boolean onTouch(View v, MotionEvent event)
+                    {
+                        double startX, startY, endX, endY, offsetX, offsetY, finalX, finalY;
+                        switch (event.getAction())
+                        {
+                            case MotionEvent.ACTION_DOWN:{  //按下
+                                startX = event.getRawX();
+                                endY = event.getRawY();
+                                break;
+                            }
+
+                            case MotionEvent.ACTION_MOVE:{
+
+
+                            }
+
+                            case MotionEvent.ACTION_UP:{    //松开
+
+                                break;
+                            }
+                            default:break;
+                        }
+                        return true;    //不响应click事件
+                    }
+                }
+        );
+
+    }
+
+
+    public void onClickBtnFace(View view)
+    {
+
+    }
+
 
 }

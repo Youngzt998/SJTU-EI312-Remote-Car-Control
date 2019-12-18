@@ -7,8 +7,13 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -26,10 +31,12 @@ import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
@@ -40,6 +47,7 @@ import java.lang.reflect.Array;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.UUID;
 
 //import com.google.zxing.client.*;
 
@@ -84,6 +92,17 @@ public class PhoneOnCarActivity extends AppCompatActivity {
     TextureView textureView_back;
     ImageReader.OnImageAvailableListener mOnImageAvailableListener;
 
+
+    //蓝牙模块
+    private Button buttonConnect;
+    private BluetoothAdapter mbluetoothAdapter;
+    private String bluetoothDeviceMacAddress = "00:15:FF:F3:23:89"; //Bluetooth module physical address
+    private BluetoothDevice bluetoothDevice = null; // Connected Bluetooth device
+    private BluetoothSocket btSocket = null; // Bluetooth communication socket
+    private final static String MY_UUID = "00001101-0000-1000-8000-00805F9B34FB"; // SPP service UUID number
+    private final static int RESULT_CODE = 100;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -94,6 +113,19 @@ public class PhoneOnCarActivity extends AppCompatActivity {
 
         setOnImageAvailableListener();
 
+
+        //蓝牙模块
+        mbluetoothAdapter = BluetoothAdapter.getDefaultAdapter(); //get the default bluetooth adapter
+//        buttonConnect.setOnClickListener(PhoneOnCarActivity.this);
+//        buttonLed.setOnClickListener(this);
+
+        buttonConnect = (Button) findViewById(R.id.btnBlueTooth);
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BluetoothDevice.ACTION_FOUND);  //Bluetooth search
+        filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
+        filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        registerReceiver(mReceiver, filter);
     }
 
     /*************************************************************************************************************************/
@@ -119,6 +151,8 @@ public class PhoneOnCarActivity extends AppCompatActivity {
             else {
                 Log.d(TAG, "intent data is null");
             }
+        }else if (requestCode == RESULT_CODE) {
+            connectBtSocket();
         }
     }
 
@@ -203,7 +237,7 @@ public class PhoneOnCarActivity extends AppCompatActivity {
         Toast.makeText(PhoneOnCarActivity.this, "开启后置摄像头成功", Toast.LENGTH_SHORT).show();
     }
 
-    //实时预览摄像头画面,摄像头开启后直接调用
+    //摄像头实时画面,摄像头开启后直接调用
     public void createCameraPreviewSession()
     {
         try{
@@ -329,13 +363,12 @@ public class PhoneOnCarActivity extends AppCompatActivity {
     }
 
 
-
-
     /*************************************************************************************************************************/
 
     //按下连接控制端的按钮
     public void clickBtnWifi(View view)
     {
+        //Toast.makeText(PhoneOnCarActivity.this, "手持端 IP： ", Toast.LENGTH_SHORT).show();
         startConnect_Control();
     }
 
@@ -364,10 +397,9 @@ public class PhoneOnCarActivity extends AppCompatActivity {
         {
             Intent intent = new Intent(PhoneOnCarActivity.this, CaptureActivity.class);
             startActivityForResult(intent,REQUEST_CODE_QR_STRING);
-           // String content = intent.getStringExtra("codedContent");
+            // String content = intent.getStringExtra("codedContent");
             Log.d(TAG, "code content is " + newActivityResultString);
             Log.d(TAG, "test is: " + test);
-
         }
 
         @Override
@@ -377,7 +409,8 @@ public class PhoneOnCarActivity extends AppCompatActivity {
             try{
                 Log.d(TAG, "try connecting: " + newActivityResultString);
                 mPhoneOnCarIpAddress_Control = newActivityResultString;
-                mPhoneOnCarPort_Control = 8000;
+                //mPhoneOnCarIpAddress_Control = "192.168.43.237";
+                mPhoneOnCarPort_Control = 60000;
 
                 mSocket_Control = new Socket(mPhoneOnCarIpAddress_Control, mPhoneOnCarPort_Control);
                 if(mSocket_Control != null)
@@ -402,16 +435,16 @@ public class PhoneOnCarActivity extends AppCompatActivity {
     //可能同时用于控制小车移动
     class SocketReceiveThread_Control extends Thread
     {
-        private boolean threadExit; //???
+
         public SocketReceiveThread_Control()
         {
-            threadExit = false;
+
         }
 
         public void run()
         {
             byte[] buffer = new byte[4];
-            while (!threadExit)
+            while (!interrupted())
             {
                 try{
                     if(buffer == null)
@@ -427,18 +460,114 @@ public class PhoneOnCarActivity extends AppCompatActivity {
                         String receiveData = new String(buffer, 0, count);
                         Log.d(TAG, "read buffer:"+receiveData+",count="+count);
                         //Toast.makeText(this, "Phone On Hand", Toast.LENGTH_SHORT).show();
+                        if(receiveData.length()!=0)
+                            send(receiveData.charAt(0));
                     }
-
                 }
                 catch (Exception e){
-                    //Log.d(TAG, "read control msg fail");
+                    //Log.d(TAG, "read control msg error");
                 }
             }
         }
 
-        void ThreadExit()
-        {
-            threadExit = true;
+    }
+
+
+
+    public void onClickBtnBlueTooth(View view)
+    {
+        if ("连接蓝牙".equals(buttonConnect.getText().toString())) {
+            if (!mbluetoothAdapter.isEnabled()){
+                startActivityForResult(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS), RESULT_CODE);
+            } else {
+                connectBtSocket();
+            }
+
+        } else {
+            disconnect();
         }
     }
+
+    public void onClickBtnTest(View view)
+    {
+        send('1');
+    }
+
+    public void send(char command) {
+        try {
+            if (btSocket != null) {
+                OutputStream os = btSocket.getOutputStream();   //Bluetooth connection output stream
+                os.write(command);
+                Toast.makeText(this, "DELIVERED SUCCESS", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "请先连接蓝牙", Toast.LENGTH_SHORT).show();
+            }
+
+        } catch (IOException e) {
+        }
+    }
+
+
+    // Help us find the physical address of the Bluetooth module that needs to be connected
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                Log.i(TAG, "Searched Bluetooth device;  device name: " + device.getName() + "  device address: " + device.getAddress());
+            }
+            if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
+                Log.i(TAG, "ACTION_ACL_CONNECTED");
+                if (btSocket.isConnected()) {
+                    buttonConnect.setText("蓝牙已连接");
+                }
+            }
+            if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
+                Log.i(TAG, "ACTION_ACL_CONNECTED");
+                if (btSocket.isConnected()) {
+                    buttonConnect.setText("连接蓝牙");
+                }
+            }
+        }
+    };
+
+    private void connectBtSocket() {
+        // Get the handle of the Bluetooth device
+        bluetoothDevice = mbluetoothAdapter.getRemoteDevice(bluetoothDeviceMacAddress);
+        //Turn off scanning before pairing
+        if (mbluetoothAdapter.isDiscovering()) {
+            mbluetoothAdapter.cancelDiscovery();
+        }
+        // Get the connected socket
+        try {
+            btSocket = bluetoothDevice.createRfcommSocketToServiceRecord(UUID
+                    .fromString(MY_UUID));
+            btSocket.connect();  //Connection socket
+        } catch (IOException e) {
+            Toast.makeText(this, "Connection failed, can't get Socket！" + e, Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
+
+        if (btSocket.isConnected()) {
+            Log.i(TAG, "socket connected");
+            Toast.makeText(this, "connect success", Toast.LENGTH_SHORT).show();
+            buttonConnect.setText("蓝牙已连接");
+        } else {
+            Log.i(TAG, "socket didn't connected");
+            Toast.makeText(this, "connect failed", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
+    private void disconnect() {
+        try {
+            if (btSocket != null) {
+                btSocket.close();
+            }
+        } catch (IOException e) {
+        }
+        buttonConnect.setText("连接蓝牙");
+    }
+
 }
