@@ -1,4 +1,4 @@
-include ':app', ':android-core', ':core'
+include ':app', ':android-core', ':core', ':joystick', ':KqwRockerLibrary'
 rootProject.name='Android_TCP'
 include ':openCVLibrary348'
 include ':android'

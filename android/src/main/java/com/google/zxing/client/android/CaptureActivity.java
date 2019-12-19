@@ -461,6 +461,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
       bundle.putString("resultString", resultString);
       resultIntent.putExtras(bundle);
       this.setResult(RESULT_OK, resultIntent);
+      Toast.makeText(CaptureActivity.this, "扫描结果为 " + resultString, Toast.LENGTH_SHORT);
     }
     CaptureActivity.this.finish();
 

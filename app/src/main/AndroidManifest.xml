@@ -11,11 +11,13 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:replace="android:icon"
+
         >
         <activity android:name=".PhoneOnCarActivity"></activity>
         <activity android:name=".PhoneOnHandActivity" />
 <!--        <activity android:name=".com.google.zxing.client.android.CaptureActivity" />-->
         <activity android:name=".MainActivity">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -30,4 +32,5 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.BLUETOOTH"/>
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+
 </manifest>

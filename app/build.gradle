@@ -37,5 +37,6 @@ dependencies {
     implementation project(path: ':core')
     implementation project(path: ':android-core')
     implementation project(path: ':android')
+    implementation project(path: ':KqwRockerLibrary')
     //implementation 'com.google.zxing:core:3.2.1'
 }

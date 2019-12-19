@@ -7,25 +7,29 @@ import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.view.MotionEvent;
-import android.view.Surface;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.TextView;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import com.example.android_tcp.util.NetTools;
 import com.example.android_tcp.util.QRCodeUtil;
-import com.google.zxing.qrcode.QRCodeWriter;
+import com.kongqw.rockerlibrary.view.RockerView;
 
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.OpenCVLoader;
@@ -43,12 +47,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
-import java.util.Enumeration;
 
 public class PhoneOnHandActivity extends AppCompatActivity implements
         CameraBridgeViewBase.CvCameraViewListener2{
@@ -66,6 +66,12 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
 
 
     private String TAG = "PhoneOnHandActivity";
+
+    private String leftCode = "1";
+    private String rightCode = "2";
+    private String upCode = "3";
+    private String downCode = "4";
+
 
     //可能需要建立两条信道
     //作为服务端发送控制数据相关变量名后缀"_Control"
@@ -101,6 +107,7 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
 
     private Handler subThreadHandler;   //主线程向子线程发送消息
 
+    //opencv变量
     private CameraBridgeViewBase cameraView;
     private CascadeClassifier classifier;
     private Mat mGray;
@@ -108,60 +115,84 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
     private int mAbsoluteFaceSize = 0;
     private boolean isFrontCamera;
 
+    //重力感应变量
+    GravityListener gravityListener;
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_phone_on_hand);
         Toast.makeText(this, "Phone On Hand", Toast.LENGTH_SHORT).show();
-
+        //设置横屏
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         //设置按钮事件
-        setButton();
+        //setButton();
+        setBottonGesture();
         //开启控制流的服务端连接
         startServer_Control();
+
+
+        //重力监听
+       gravityListener = new GravityListener(PhoneOnHandActivity.this);
+       setSwitchGravity();
+
+       //摇杆方向
+        setJoyStick();
 
         //测试：使用子线程循环向小车端发送数据
         mSendThread_Control = new SocketSendThread_Control();
         mSendThread_Control.start();
 
         //向小车端发送ip地址
-//        UdpSendThread udpSendThread = new UdpSendThread(this.getApplicationContext());
-//        udpSendThread.start();
+        UdpSendThread udpSendThread = new UdpSendThread(this.getApplicationContext());
+        udpSendThread.start();
 
 //        QRCodeWriter qrCodeWriter = new QRCodeWriter();
 
 
-//        initWindowSettings();
-//        cameraView = findViewById(R.id.FaceView);
-//        cameraView.setVisibility(SurfaceView.VISIBLE);
-//        cameraView.setCvCameraViewListener(this); // 设置相机监听
-//        initClassifier();
-//        cameraView.setCameraIndex(CameraBridgeViewBase.CAMERA_ID_FRONT);
-//        cameraView.enableView();
+        //opencv 相关
+        initWindowSettings();
+        cameraView = findViewById(R.id.FaceView);
+        cameraView.setVisibility(SurfaceView.VISIBLE);
+        cameraView.setCvCameraViewListener(this); // 设置相机监听
+        initClassifier();
+        cameraView.setCameraIndex(CameraBridgeViewBase.CAMERA_ID_FRONT);
+        cameraView.enableView();
 
 
     }
 
+    @Override
+    protected void onDestroy()
+    {
+        super.onDestroy();
+        try {
+            mServerSocket_Control.close();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
 
 
     public void clickOnStartServer(View view)
     {
-//        try {
-//            mSocket_Control.close();
-//        }catch (Exception e){
-//            e.printStackTrace();
-//        }
-//
-//        mAcceptThread_Control = new SocketBuildThread();
-//        mAcceptThread_Control.start();
-//        Toast.makeText(this, "服务重启成功", Toast.LENGTH_SHORT).show();
+        try {
+            mSocket_Control.close();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+        mAcceptThread_Control = new SocketBuildThread();
+        mAcceptThread_Control.start();
+        Toast.makeText(this, "服务重启成功", Toast.LENGTH_SHORT).show();
     }
 
     public void startServer_Control()
     {
         try{
             //开启服务并指定端口
-            mServerSocket_Control = new ServerSocket(60000);
+            mServerSocket_Control = new ServerSocket(38324);
         }
         catch (IOException e){
             Toast.makeText(this, "绑定端口失败...", Toast.LENGTH_SHORT).show();
@@ -221,7 +252,7 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
                     //read header
                     size = NetTools.readall(mInStream_Image, header, 0, 4);
                     if(size == -1){break;}
-                    Log.d(TAG, "read image's header successfully ");
+                    //Log.d(TAG, "read image's header successfully ");
 
                     //read image
                     int length = NetTools.bytesToInt(header);
@@ -229,7 +260,7 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
                     byte [] buffer = new byte[length];
                     size = NetTools.readall(mInStream_Image, buffer, 0, length);
                     if (size == -1){break;}
-                    Log.d(TAG, "read image successfully ");
+                    //Log.d(TAG, "read image successfully ");
 
                     //convert to bitmap
                     Bitmap bitmapImage = BitmapFactory.decodeByteArray(buffer, 0, buffer.length, null);
@@ -270,7 +301,7 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
         @Override
         public void handleMessage(Message msg)
         {
-            Log.d("ImageHandler", "handleMessage");
+           // Log.d("ImageHandler", "handleMessage");
             switch (msg.what)
             {
                 case SET_IMAGEVIEW:
@@ -373,10 +404,10 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
 
     // 初始化窗口设置, 包括全屏、横屏、常亮
     private void initWindowSettings() {
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+       getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+               WindowManager.LayoutParams.FLAG_FULLSCREEN);
+       getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
     }
 
     // 初始化人脸级联分类器，必须先初始化
@@ -406,10 +437,10 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
         mGray = inputFrame.gray();
         // 翻转矩阵以适配前后置摄像头
         if (isFrontCamera) {
-            Core.flip(mRgba, mRgba, 0);
-            Core.flip(mGray, mGray, 0);
-            Core.rotate(mRgba, mRgba, Core.ROTATE_90_COUNTERCLOCKWISE);
-            Core.rotate(mGray, mGray, Core.ROTATE_90_COUNTERCLOCKWISE);
+            Core.flip(mRgba, mRgba, -1);
+            Core.flip(mGray, mGray, -1);
+//            Core.rotate(mRgba, mRgba, Core.ROTATE_90_COUNTERCLOCKWISE);
+//            Core.rotate(mGray, mGray, Core.ROTATE_90_COUNTERCLOCKWISE);
         } //else {
         //Core.flip(mRgba, mRgba, 1);
         //Core.flip(mGray, mGray, 1);
@@ -435,24 +466,130 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
             Imgproc.rectangle(mRgba, faceRect.tl(), faceRect.br(), faceRectColor, 3);
         }
 
-        //判断脸在右侧还是左侧
-        /*if(facesArray[0].tl().x*2>mRgba.cols())
-            textview.setText("left");
-        else if(facesArray[0].br().x*2<mRgba.cols())
-            textview.setText("right");
-        else
-            textview.setText("midle");*/
+        try {
+            //判断脸在右侧还是左侧
+            if(facesArray[0].tl().x*2>mRgba.cols())
+            {
+                Log.d(TAG, "face: left");
+                Toast.makeText(PhoneOnHandActivity.this, "左", Toast.LENGTH_SHORT).show();
+                sendThroughSubThreadToCar(leftCode);
+            }
+            else if(facesArray[0].br().x*2<mRgba.cols())
+            {
+                Toast.makeText(PhoneOnHandActivity.this, "右", Toast.LENGTH_SHORT).show();
+                sendThroughSubThreadToCar(rightCode);
+            }
+            else{
+
+            }
+        }catch (Exception e){
+            // e.printStackTrace();
+        }
+
+
 
         return mRgba;
     }
 
+    /*************************************************************************************************************************/
+
+    // 重力感应模块
+    public class GravityListener implements SensorEventListener
+    {
+
+        private Context context;
+        private SensorManager sensorManager;
+        private int currentRoatateCode = 0;
+        private boolean enabled = false;
+
+        private int count = 0;
+        private int period = 2;
+
+        public GravityListener(Context context)
+        {
+            this.context = context;
+            sensorManager = (SensorManager)context.getSystemService((Context.SENSOR_SERVICE));
+            sensorManager.registerListener(this,
+                    sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+                    SensorManager.SENSOR_DELAY_NORMAL);
+
+        }
+        @Override
+        public void onSensorChanged(SensorEvent event)
+        {
+            if(event.sensor.getType()!=Sensor.TYPE_ACCELEROMETER)
+            {
+                return;
+            }
+
+            count = (count + 1) % period;
+
+            float[] values = event.values;
+            float gx = values[0];
+            float gy = values[1];
+            float gz = values[2];
+
+
+            double g = Math.sqrt(gx * gx + gy * gy + gz * gz);
+            double ggx = gx / g;
+            double ggy = gy / g;
+            double ggz = gz / g;
+
+            if(enabled && count == 0) {
+                //Log.d(TAG, "(ggx, ggy, ggz)= (" + ggx + "," + ggy + "," + ggz + ")");
+
+                if (ggx > 0.5) {
+                    Log.d(TAG, "Gravity Control: L");
+                    sendThroughSubThreadToCar(leftCode);
+                } else if (ggx < -0.5) {
+                    Log.d(TAG, "Gravity Control: R");
+                    sendThroughSubThreadToCar(rightCode);
+                }
+
+                if (ggy > 0.5) {
+                    Log.d(TAG, "Gravity Control: D");
+                    sendThroughSubThreadToCar(downCode);
+                } else if (ggy < -0.5) {
+                    Log.d(TAG, "Gravity Control: U");
+                    sendThroughSubThreadToCar(upCode);
+                }
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy)
+        {
+
+        }
+
+        public void setEnabled()
+        {
+            this.enabled = true;
+        }
+        public void setDisabled()
+        {
+            this.enabled = false;
+        }
+    }
 
     /*************************************************************************************************************************/
+    public void sendThroughSubThreadToCar(String m)
+    {
+        Message message = new Message();
+        message.obj = m;
+        try {
+            subThreadHandler.sendMessage(message);
+        }
+        catch (Exception e){
+            Log.d(TAG, "send to subthread fail");
+            e.printStackTrace();
+        }
+    }
+
+
     /*
     * 设置按钮点击事件
     */
-
-
 
     //生成包含IP地址的二维码的点击事件
     //借用一下之后的image对象
@@ -488,6 +625,7 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
     //获取图像流信道连接状态
     //TBD...
 
+    //因为做小车任务的表示连续发送会因为阻塞而产生延迟等问题，所以取消这种方案
     public void setButton()
     {
         //setButtonUDLR();
@@ -633,73 +771,29 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
     //控制上下左右，这种方式只能点击一下发送一个字符串
     public void clickBtnUp(View view)
     {
-        //不能在主线程进行，否则报错(Android 4 以下)
+        //不能在主线程进行，否则报错(Android 4 以上)
         // writeMsgToCar("u");
 
         //向子线程发送消息
-        Message message = new Message();
-        message.obj = "3";
-        try {
-            subThreadHandler.sendMessage(message);
-        }
-        catch (Exception e){
-            Log.d(TAG, "send to subthread fail");
-            e.printStackTrace();
-        }
+        sendThroughSubThreadToCar(upCode);
     }
 
     public void clickBtnDown(View view)
     {
-        //不能在主线程进行，否则报错(Android 4 以下)
-        // writeMsgToCar("u");
-
-        //向子线程发送消息
-        Message message = new Message();
-        message.obj = "4";
-        try {
-            subThreadHandler.sendMessage(message);
-        }
-        catch (Exception e){
-            Log.d(TAG, "send to subthread fail");
-            e.printStackTrace();
-        }
+        sendThroughSubThreadToCar(downCode);
     }
 
     public void clickBtnLeft(View view)
     {
-        //不能在主线程进行，否则报错(Android 4 以下)
-        // writeMsgToCar("u");
-
-        //向子线程发送消息
-        Message message = new Message();
-        message.obj = "1";
-        try {
-            subThreadHandler.sendMessage(message);
-        }
-        catch (Exception e){
-            Log.d(TAG, "send to subthread fail");
-            e.printStackTrace();
-        }
+        sendThroughSubThreadToCar(leftCode);
     }
 
     public void clickBtnRight(View view)
     {
-        //不能在主线程进行，否则报错(Android 4 以下)
-        // writeMsgToCar("u");
-
-        //向子线程发送消息
-        Message message = new Message();
-        message.obj = "2";
-        try {
-            subThreadHandler.sendMessage(message);
-        }
-        catch (Exception e){
-            Log.d(TAG, "send to subthread fail");
-            e.printStackTrace();
-        }
+        sendThroughSubThreadToCar(rightCode);
     }
 
-
+    private double startX, startY, endX, endY, offsetX, offsetY, finalX, finalY;
     public void setBottonGesture()
     {
         ImageButton imageButton= (ImageButton)findViewById(R.id.btnGesture);
@@ -708,22 +802,34 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
                     @Override
                     public boolean onTouch(View v, MotionEvent event)
                     {
-                        double startX, startY, endX, endY, offsetX, offsetY, finalX, finalY;
+
                         switch (event.getAction())
                         {
                             case MotionEvent.ACTION_DOWN:{  //按下
-                                startX = event.getRawX();
-                                endY = event.getRawY();
+                                startX = event.getX();
+                                startY = event.getY();
+                                //Log.d(TAG, "(startX, startY): " + startX + ", " + startY);
                                 break;
                             }
 
                             case MotionEvent.ACTION_MOVE:{
 
-
+                                break;
                             }
 
                             case MotionEvent.ACTION_UP:{    //松开
+                                endX = event.getX();
+                                endY = event.getY();
+                                //Log.d(TAG, "(endX, endY): " + endX + ", " + endY);
+                                //Log.d(TAG, "(dx, dy): " + (endX - startX) + ", " + (endY - startY)  );
+                                //if(Math.abs(offsetX) >8 && Math.abs(offsetY)>8)
+                                {
+                                    char direction = getDirection(endX - startX, endY - startY);
+                                    //Toast.makeText(PhoneOnHandActivity.this, "Phone On Hand", Toast.LENGTH_SHORT).show();
+                                    //Log.d(TAG, "direction: " + direction);
+                                    sendThroughSubThreadToCar(""+ direction);
 
+                                }
                                 break;
                             }
                             default:break;
@@ -735,11 +841,78 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
 
     }
 
-
-    public void onClickBtnFace(View view)
+    private char getDirection(double dx, double dy)
     {
+        if (Math.abs(dx)>Math.abs(dy)){
+            //X轴
+            return dx>0?'2':'1';
+        }else{
+            //Y轴
+            return dy>0?'4':'3';
+        }
 
     }
+
+    public void setSwitchGravity()
+    {
+        Switch aSwitch = (Switch)findViewById(R.id.switchGravity);
+        aSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+            {
+                if(isChecked){
+                    Toast.makeText(PhoneOnHandActivity.this, "重力控制开启...", Toast.LENGTH_SHORT).show();
+                    gravityListener.setEnabled();
+
+                }else {
+                    Toast.makeText(PhoneOnHandActivity.this, "重力控制关闭...", Toast.LENGTH_SHORT).show();
+                    gravityListener.setDisabled();
+                }
+            }
+        });
+
+        aSwitch = (Switch)findViewById(R.id.switchFace);
+    }
+
+
+    public void setJoyStick()
+    {
+        RockerView rockerView = (RockerView)findViewById(R.id.joyStick);
+        rockerView.setCallBackMode(RockerView.CallBackMode.CALL_BACK_MODE_STATE_CHANGE);
+        rockerView.setOnShakeListener(RockerView.DirectionMode.DIRECTION_8, new RockerView.OnShakeListener() {
+            @Override
+            public void onStart() {
+
+            }
+
+            @Override
+            public void direction(RockerView.Direction direction) {
+                Log.d(TAG, "摇动方向：" + direction);
+                switch (direction)
+                {
+                    case DIRECTION_UP:
+                        sendThroughSubThreadToCar(upCode);
+                        break;
+                    case DIRECTION_DOWN:
+                        sendThroughSubThreadToCar(downCode);
+                        break;
+                    case DIRECTION_LEFT:
+                        sendThroughSubThreadToCar(leftCode);
+                        break;
+                    case DIRECTION_RIGHT:
+                        sendThroughSubThreadToCar(rightCode);
+                        break;
+                        default:break;
+                }
+            }
+
+            @Override
+            public void onFinish() {
+
+            }
+        });
+    }
+
 
 
 }

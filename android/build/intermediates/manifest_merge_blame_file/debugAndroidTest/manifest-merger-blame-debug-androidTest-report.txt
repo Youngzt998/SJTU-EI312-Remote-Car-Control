@@ -3,24 +3,24 @@
 3    package="com.google.zxing.client.android.test" >
 4
 5    <uses-sdk
-5-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger1131694338126941261.xml:5:5-74
+5-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger5268303916119290506.xml:5:5-74
 6        android:minSdkVersion="24"
-6-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger1131694338126941261.xml:5:15-41
+6-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger5268303916119290506.xml:5:15-41
 7        android:targetSdkVersion="29" />
-7-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger1131694338126941261.xml:5:42-71
+7-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger5268303916119290506.xml:5:42-71
 8
 9    <instrumentation
-9-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger1131694338126941261.xml:11:5-15:86
+9-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger5268303916119290506.xml:11:5-15:86
 10        android:name="android.test.InstrumentationTestRunner"
-10-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger1131694338126941261.xml:11:22-75
+10-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger5268303916119290506.xml:11:22-75
 11        android:functionalTest="false"
-11-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger1131694338126941261.xml:14:22-52
+11-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger5268303916119290506.xml:14:22-52
 12        android:handleProfiling="false"
-12-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger1131694338126941261.xml:13:22-53
+12-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger5268303916119290506.xml:13:22-53
 13        android:label="Tests for com.google.zxing.client.android.test"
-13-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger1131694338126941261.xml:15:22-84
+13-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger5268303916119290506.xml:15:22-84
 14        android:targetPackage="com.google.zxing.client.android.test" />
-14-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger1131694338126941261.xml:12:22-82
+14-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger5268303916119290506.xml:12:22-82
 15
 16    <uses-permission android:name="android.permission.CAMERA" />
 16-->[__tested_artifact__::android] C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\library_manifest\debug\AndroidManifest.xml:27:5-65
@@ -75,13 +75,13 @@
 35-->[__tested_artifact__::android] C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\library_manifest\debug\AndroidManifest.xml:50:9-33
 36
 37    <application
-37-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger1131694338126941261.xml:7:5-9:19
+37-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger5268303916119290506.xml:7:5-9:19
 38        android:allowBackup="true"
 38-->[__tested_artifact__::android] C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\library_manifest\debug\AndroidManifest.xml:53:9-35
 39        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
 39-->[androidx.core:core:1.1.0] C:\Users\young\.gradle\caches\transforms-2\files-2.1\7f6c41cc2a14c0fbaa8d0166c17dc544\core-1.1.0\AndroidManifest.xml:24:18-86
 40        android:debuggable="true"
-40-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger1131694338126941261.xml:7:18-43
+40-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger5268303916119290506.xml:7:18-43
 41        android:icon="@drawable/launcher_icon"
 41-->[__tested_artifact__::android] C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\library_manifest\debug\AndroidManifest.xml:54:9-47
 42        android:label="@string/app_name"
@@ -89,8 +89,8 @@
 43        android:logo="@drawable/launcher_icon" >
 43-->[__tested_artifact__::android] C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\library_manifest\debug\AndroidManifest.xml:56:9-47
 44        <uses-library android:name="android.test.runner" />
-44-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger1131694338126941261.xml:8:9-60
-44-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger1131694338126941261.xml:8:23-57
+44-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger5268303916119290506.xml:8:9-60
+44-->C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\tmp\manifest\androidTest\debug\manifestMerger5268303916119290506.xml:8:23-57
 45
 46        <activity
 46-->[__tested_artifact__::android] C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\library_manifest\debug\AndroidManifest.xml:57:9-122:20
@@ -106,16 +106,11 @@
 51-->[__tested_artifact__::android] C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\library_manifest\debug\AndroidManifest.xml:62:13-48
 52            android:windowSoftInputMode="stateAlwaysHidden" >
 52-->[__tested_artifact__::android] C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\library_manifest\debug\AndroidManifest.xml:63:13-60
-53            <intent-filter>
-53-->[__tested_artifact__::android] C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\library_manifest\debug\AndroidManifest.xml:64:13-68:29
-54                <action android:name="android.intent.action.MAIN" />
-54-->[__tested_artifact__::android] C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\library_manifest\debug\AndroidManifest.xml:65:17-69
-54-->[__tested_artifact__::android] C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\library_manifest\debug\AndroidManifest.xml:65:25-66
-55
-56                <category android:name="android.intent.category.LAUNCHER" />
-56-->[__tested_artifact__::android] C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\library_manifest\debug\AndroidManifest.xml:67:17-77
-56-->[__tested_artifact__::android] C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\library_manifest\debug\AndroidManifest.xml:67:27-74
-57            </intent-filter>
+53
+54            <!-- <intent-filter> -->
+55            <!-- <action android:name="android.intent.action.MAIN"/> -->
+56            <!-- <category android:name="android.intent.category.LAUNCHER"/> -->
+57            <!-- </intent-filter> -->
 58            <intent-filter>
 58-->[__tested_artifact__::android] C:\Users\young\Documents\Project\AndroidStudioProjects\Android_TCP\android\build\intermediates\library_manifest\debug\AndroidManifest.xml:69:13-73:29
 59                <action android:name="com.google.zxing.client.android.SCAN" />

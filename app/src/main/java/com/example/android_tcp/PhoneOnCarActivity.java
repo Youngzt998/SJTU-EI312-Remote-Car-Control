@@ -313,7 +313,7 @@ public class PhoneOnCarActivity extends AppCompatActivity {
                 {
                     count = 0;
                 }
-                Log.d("ImageReader.OnImageAvailableListener.onImageAvailable", "count: "+ count );
+               // Log.d("ImageReader.OnImageAvailableListener.onImageAvailable", "count: "+ count );
                 Image img = reader.acquireNextImage();  //必须有这个语句和结尾的close(),否则画面会卡住
                 if(count == SHOW_PER_IMG)
                 {
@@ -347,7 +347,7 @@ public class PhoneOnCarActivity extends AppCompatActivity {
         mSocket_Image = mSocket_Control;
         if(mSocket_Image == null)
         {
-            Log.d("send immage: ", "socket not connected " );
+            Log.d("send image: ", "socket not connected " );
             return;
         }
 
@@ -355,9 +355,9 @@ public class PhoneOnCarActivity extends AppCompatActivity {
             OutputStream out = mSocket_Image.getOutputStream();
             out.write(NetTools.intToBytes(data.length));
             out.write(data);
-            Log.d("send immage: ", "after out.write()" );
+            // Log.d("send image: ", "after out.write()" );
         }catch (Exception e){
-            Log.d("send immage: ", "sen message failed " );
+            Log.d("send image: ", "sen message failed " );
             e.printStackTrace();
         }
     }
@@ -410,7 +410,7 @@ public class PhoneOnCarActivity extends AppCompatActivity {
                 Log.d(TAG, "try connecting: " + newActivityResultString);
                 mPhoneOnCarIpAddress_Control = newActivityResultString;
                 //mPhoneOnCarIpAddress_Control = "192.168.43.237";
-                mPhoneOnCarPort_Control = 60000;
+                mPhoneOnCarPort_Control = 38324;
 
                 mSocket_Control = new Socket(mPhoneOnCarIpAddress_Control, mPhoneOnCarPort_Control);
                 if(mSocket_Control != null)
