@@ -192,7 +192,7 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
     {
         try{
             //开启服务并指定端口
-            mServerSocket_Control = new ServerSocket(38324);
+            mServerSocket_Control = new ServerSocket(60000);
         }
         catch (IOException e){
             Toast.makeText(this, "绑定端口失败...", Toast.LENGTH_SHORT).show();
@@ -476,6 +476,7 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
             }
             else if(facesArray[0].br().x*2<mRgba.cols())
             {
+                Log.d(TAG, "face: right");
                 Toast.makeText(PhoneOnHandActivity.this, "右", Toast.LENGTH_SHORT).show();
                 sendThroughSubThreadToCar(rightCode);
             }
@@ -484,6 +485,8 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
             }
         }catch (Exception e){
             // e.printStackTrace();
+            //Toast.makeText(PhoneOnHandActivity.this, "没脸", Toast.LENGTH_SHORT).show();
+
         }
 
 

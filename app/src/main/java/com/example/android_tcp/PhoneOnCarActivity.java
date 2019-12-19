@@ -100,7 +100,7 @@ public class PhoneOnCarActivity extends AppCompatActivity {
     private BluetoothDevice bluetoothDevice = null; // Connected Bluetooth device
     private BluetoothSocket btSocket = null; // Bluetooth communication socket
     private final static String MY_UUID = "00001101-0000-1000-8000-00805F9B34FB"; // SPP service UUID number
-    private final static int RESULT_CODE = 100;
+    private final static int RESULT_CODE = 1001;
 
 
     @Override
@@ -409,8 +409,8 @@ public class PhoneOnCarActivity extends AppCompatActivity {
             try{
                 Log.d(TAG, "try connecting: " + newActivityResultString);
                 mPhoneOnCarIpAddress_Control = newActivityResultString;
-                //mPhoneOnCarIpAddress_Control = "192.168.43.237";
-                mPhoneOnCarPort_Control = 38324;
+                //mPhoneOnCarIpAddress_Control = "192.168.1.108";
+                mPhoneOnCarPort_Control = 60000;
 
                 mSocket_Control = new Socket(mPhoneOnCarIpAddress_Control, mPhoneOnCarPort_Control);
                 if(mSocket_Control != null)
