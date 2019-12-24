@@ -490,7 +490,7 @@ public class PhoneOnCarActivity extends AppCompatActivity {
 
     public void onClickBtnTest(View view)
     {
-        send('1');
+        send('3');
     }
 
     public void send(char command) {
@@ -502,6 +502,7 @@ public class PhoneOnCarActivity extends AppCompatActivity {
             } else {
                 Toast.makeText(this, "请先连接蓝牙", Toast.LENGTH_SHORT).show();
             }
+            Log.d(TAG, "向小车发送" + command);
 
         } catch (IOException e) {
         }

@@ -38,5 +38,6 @@ dependencies {
     implementation project(path: ':android-core')
     implementation project(path: ':android')
     implementation project(path: ':KqwRockerLibrary')
+    implementation project(path: ':voice_core')
     //implementation 'com.google.zxing:core:3.2.1'
 }

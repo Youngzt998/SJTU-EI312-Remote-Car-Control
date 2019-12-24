@@ -3,6 +3,7 @@ package com.example.android_tcp;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -29,6 +30,7 @@ import android.widget.Toast;
 
 import com.example.android_tcp.util.NetTools;
 import com.example.android_tcp.util.QRCodeUtil;
+import com.google.zxing.client.android.CaptureActivity;
 import com.kongqw.rockerlibrary.view.RockerView;
 
 import org.opencv.android.CameraBridgeViewBase;
@@ -161,6 +163,7 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
         cameraView.enableView();
 
 
+        setSwitchFace();
     }
 
     @Override
@@ -430,9 +433,14 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
         }
     }
 
+
+    int period_c = 50;
+    int counter_c =0;
     @Override
     // 这里执行人脸检测的逻辑, 根据OpenCV提供的例子实现(face-detection)
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
+
+
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
         // 翻转矩阵以适配前后置摄像头
@@ -466,23 +474,43 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
             Imgproc.rectangle(mRgba, faceRect.tl(), faceRect.br(), faceRectColor, 3);
         }
 
+
+
+
+        counter_c = (counter_c+1)%period_c;
         try {
-            //判断脸在右侧还是左侧
-            if(facesArray[0].tl().x*2>mRgba.cols())
+
+
+            double tmp = Math.abs(facesArray[0].tl().x - facesArray[0].br().x);
+
+            if (counter_c == 0 && faceEnabled)
             {
-                Log.d(TAG, "face: left");
-                Toast.makeText(PhoneOnHandActivity.this, "左", Toast.LENGTH_SHORT).show();
-                sendThroughSubThreadToCar(leftCode);
-            }
-            else if(facesArray[0].br().x*2<mRgba.cols())
-            {
-                Log.d(TAG, "face: right");
-                Toast.makeText(PhoneOnHandActivity.this, "右", Toast.LENGTH_SHORT).show();
-                sendThroughSubThreadToCar(rightCode);
-            }
-            else{
+                Log.d(TAG, "方框大小" + tmp);
+                if(tmp>150)
+                {
+                    Log.d(TAG, "前");
+                    sendThroughSubThreadToCar(upCode);
+                }
+
+                //判断脸在右侧还是左侧
+                if(facesArray[0].tl().x*2>mRgba.cols())
+                {
+                    Log.d(TAG, "左");
+                    Toast.makeText(PhoneOnHandActivity.this, "左", Toast.LENGTH_SHORT).show();
+                    sendThroughSubThreadToCar(leftCode);
+                }
+                else if(facesArray[0].br().x*2<mRgba.cols())
+                {
+                    Log.d(TAG, "右");
+                    Toast.makeText(PhoneOnHandActivity.this, "右", Toast.LENGTH_SHORT).show();
+                    sendThroughSubThreadToCar(rightCode);
+                }
 
             }
+
+
+
+
         }catch (Exception e){
             // e.printStackTrace();
             //Toast.makeText(PhoneOnHandActivity.this, "没脸", Toast.LENGTH_SHORT).show();
@@ -877,6 +905,28 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
         aSwitch = (Switch)findViewById(R.id.switchFace);
     }
 
+    public boolean faceEnabled = false;
+    public void setSwitchFace()
+    {
+        Switch aSwitch = (Switch)findViewById(R.id.switchFace);
+        aSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+            {
+                if(isChecked){
+                    Toast.makeText(PhoneOnHandActivity.this, "人脸控制开启...", Toast.LENGTH_SHORT).show();
+
+                    faceEnabled = true;
+
+                }else {
+                    Toast.makeText(PhoneOnHandActivity.this, "人脸控制关闭...", Toast.LENGTH_SHORT).show();
+                    faceEnabled = false;
+                }
+            }
+        });
+    }
+
+
 
     public void setJoyStick()
     {
@@ -916,6 +966,42 @@ public class PhoneOnHandActivity extends AppCompatActivity implements
         });
     }
 
+    public void onClickBtnVoice(View view)
+    {
+        Intent intent = new Intent(PhoneOnHandActivity.this, VoiceActivity.class);
+        startActivityForResult(intent, VOICE_GET);
+    }
 
+
+
+
+    // 从某个acivity返回
+    static int VOICE_GET = 105;
+    public String newActivityResultString;
+    public int test = -1;
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data)
+    {
+        test = 0;
+        Log.d(TAG, "声音识别（resultFunction）: " + data.getDataString());
+
+        super.onActivityResult(requestCode, resultCode, data);
+        //IntentResult intentResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
+        if(requestCode == VOICE_GET)
+        {
+            Log.d(TAG, "REQUEST_CODE_QR_STRING");
+            if(data!=null)
+            {
+                newActivityResultString= data.getStringExtra("resultString");
+                Log.d(TAG, "声音识别: " + data.getDataString());
+                Log.d(TAG, "声音识别: " + data.getStringExtra("resultString"));
+
+                sendThroughSubThreadToCar(newActivityResultString);
+            }
+            else {
+                Log.d(TAG, "intent data is null");
+            }
+        }
+    }
 
 }
